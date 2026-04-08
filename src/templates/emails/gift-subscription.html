@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 40px 30px; text-align: center; }
+    .header h1 { font-size: 32px; margin: 0; }
+    .gift-icon { font-size: 60px; margin-bottom: 15px; }
+    .content { padding: 40px 30px; }
+    .gift-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0; }
+    .credentials-box { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin: 25px 0; }
+    .label { font-size: 13px; color: #6b7280; text-transform: uppercase; font-weight: 600; margin-bottom: 5px; }
+    .value { font-size: 18px; color: #1f2937; font-weight: 700; font-family: monospace; background: white; padding: 12px; border-radius: 6px; margin-top: 8px; }
+    .feature { background: #f0fdf4; padding: 18px; margin: 12px 0; border-radius: 8px; border-left: 4px solid #10b981; }
+    .feature-title { color: #059669; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .button { display: inline-block; padding: 14px 30px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+    .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 6px; color: #92400e; }
+    .footer { background: #f9fafb; padding: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="gift-icon">🎁</div>
+      <h1>You've Got a Gift!</h1>
+    </div>
+    
+    <div class="content">
+      <p>Hi {{firstName}},</p>
+      
+      <p>Exciting news! {{gifterName}} has gifted you a 1-year membership to Travel in a Click — and we're thrilled to welcome you.</p>
+      
+      <p>Over the next 12 months, you'll receive handpicked travel deals, exclusive discounts, and inspiring getaways delivered straight to your inbox. Whether you're planning a relaxing escape, a bucket list adventure, or a spontaneous weekend away, we're here to help you travel more while spending less.</p>
+      
+      <p><strong>As a member, you'll enjoy:</strong></p>
+      
+      <div style="margin: 20px 0; color: #4b5563; line-height: 1.8;">
+        <p style="margin: 5px 0;">• Two curated deal emails per week packed with incredible savings</p>
+        <p style="margin: 5px 0;">• Access to 100+ detailed travel guides</p>
+        <p style="margin: 5px 0;">• Exclusive subscriber-only offers</p>
+        <p style="margin: 5px 0;">• A chance to win a free trip in our monthly giveaways</p>
+      </div>
+      
+      <p>You can log in anytime at: <strong style="color: #10b981;">www.travelinaclick.com</strong></p>
+      
+      <div class="credentials-box">
+        <h3 style="margin: 0 0 20px 0; color: #059669; font-size: 16px;">Login Credentials</h3>
+        
+        <div style="margin-bottom: 15px;">
+          <div class="label">Email Address</div>
+          <div class="value">{{email}}</div>
+        </div>
+        
+        <div>
+          <div class="label">Password</div>
+          <div class="value">{{password}}</div>
+        </div>
+      </div>
+      
+      <p>Your journey starts now — keep an eye on your inbox for amazing opportunities to explore the world without breaking the bank.</p>
+      
+      <p style="margin-top: 30px;">Welcome to the club, and happy travels!<br>The Travel in a Click Team</p>
+    </div>
+    
+    <div class="footer">
+      <p style="color: #10b981; font-weight: 700; margin-bottom: 5px;">Travel in a Click</p>
+      <p style="color: #6b7280; font-size: 13px;">© 2026 Travel in a Click. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
