@@ -1,0 +1,2809 @@
+{
+  "info": {
+    "name": "Travel Safari API",
+    "description": "Complete API collection for Travel Safari platform.\n\n**Test Credentials:**\n🔐 Admin:          admin@example.com / admin123\n👤 User:           user@example.com / user123\n⏰ Expired User:   expired@example.com / expired123\n🎁 Gift Expired:   giftexpired@example.com / giftexpired123\n✅ Active User:    active@example.com / active123\n🔄 Renewed User:   renewed@example.com / renewed123\n\n**Features:**\n- User registration with email verification (OTP via Mailchimp)\n- Flexible payment amounts (default 999 cents = €9.99)\n- Multiple payment methods: Credit/Debit Cards + Apple Pay 🍎\n- Gift Subscription: Gift memberships to friends/family 🎁\n- Subscription Renewal: Automatic tracking and renewal support 🔄\n- Subscription Expiry: Auto-detection and user status updates ⏰\n- Password Reset: Secure OTP-based password recovery 🔐\n- Contact Form: Public contact form with email notifications 📬\n- Automatic Stripe checkout session creation\n- JWT token authentication (7-day expiry)\n- User management endpoints\n\n**Quick Start:**\n1. Register → Get OTP via email\n2. Verify OTP (optional: specify amount in CENTS) → Auto-redirects to payment\n3. Complete payment (Card or Apple Pay) → Account activated\n4. Login → Access granted\n\nOR use existing credentials above for quick testing!\n\n**Subscription Renewal Flow:**\n1. Login with expired user (expired@example.com)\n2. API will return 403 Forbidden: Subscription expired\n3. Create checkout session → Complete payment\n4. System detects renewal and marks old subscription as renewed\n5. New subscription created → User reactivated\n6. Access granted with new subscription\n\n**Gift Subscription Flow:**\n1. Login as existing user\n2. Create gift checkout session with recipient details\n3. Complete payment → Recipient account auto-created\n4. Recipient gets email with login credentials\n5. Gift expires after 1 year → Reminder sent 1 month before expiry\n\n**Password Reset Flow:**\n1. Forgot Password (email) → Get 4-digit OTP via email\n2. Verify Reset OTP (email + code) → Reset token returned (valid 5 min)\n3. Reset Password (resetToken + newPassword) → Password updated\n4. Login with new password → Access granted\n\n**Contact Form Flow:**\n1. Submit form (fullName, email, message) → Email sent to admin\n2. Admin receives notification with sender details\n3. Admin can reply directly to sender's email\n\n**Subscription System Details:**\n- Active subscriptions checked on every authenticated request\n- Expired subscriptions automatically marked by daily cron job (08:00 AM)\n- Users with expired subscriptions set to INACTIVE status\n- Renewal detection: Old subscriptions marked as 'isRenewed'\n- Multiple subscriptions per user supported (historical tracking)\n- Gift subscriptions tracked separately with reminder system\n\n**Field Conventions:**\n- Required fields marked in descriptions\n- Optional fields have default values\n- ⚠️ All monetary amounts sent in CENTS (999 = €9.99)\n- Backend converts cents → euros for database storage\n- Stripe receives amounts in cents as required\n- Password requirements: 8+ chars, uppercase, lowercase, number, special char\n\n**Test Details:**\n- Base URL: http://localhost:3000\n- Card Test: 4242 4242 4242 4242\n- Apple Pay: Available on Safari/iOS automatically\n- Default Payment: 999 cents (€9.99)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "api_version",
+      "value": "v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "test@example.com",
+      "type": "string"
+    },
+    {
+      "key": "stripe_session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reset_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Check API Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the API server is running"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Dashboard stats retrieved');",
+                  "    console.log('Total Members:', response.data.totalMembers);",
+                  "    console.log('Active Deals:', response.data.activeDeals);",
+                  "    console.log('Current Giveaways:', response.data.currentGiveaways);",
+                  "    console.log('Recent Signups:', response.data.recentSignups.length);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "dashboard"]
+            },
+            "description": "Get dashboard statistics for admin overview.\n\n**Authentication Required:** Admin role\n\n**Response Data:**\n- totalMembers: Number of users with USER role\n- activeDeals: Count of active travel deals\n- currentGiveaways: Count of active giveaways\n- recentSignups: Array of last 5 registered users with:\n  - id: User UUID\n  - email: User email\n  - firstName: First name\n  - lastName: Last name\n  - fullName: Full name\n  - createdAt: Registration date\n\n**Use Case:**\n- Admin dashboard overview page\n- Display key metrics at a glance\n- Show recent user registrations"
+          },
+          "response": []
+        }
+      ],
+      "description": "Dashboard statistics for admin overview.\n\n**Endpoint:**\n- GET /dashboard - Get dashboard stats\n\n**Features:**\n- Total members count (USER role only)\n- Active deals count\n- Active giveaways count\n- Recent sign-ups (last 5 users)\n\n**Security:**\n- Admin role required\n- Authentication token required"
+    },
+    {
+      "name": "Authentication Flow",
+      "item": [
+        {
+          "name": "1. Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    console.log('✅ Registration successful! Check email for OTP.');",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.user && response.data.user.email) {",
+                  "        pm.collectionVariables.set('test_email', response.data.user.email);",
+                  "        console.log('Email saved:', response.data.user.email);",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Registration failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "// ===== REGISTER NEW USER =====\n{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\"\n}\n\n// ===== EXISTING ACCOUNTS (Use Login instead) =====\n// Admin: admin@example.com / admin123\n// User:  user@example.com / user123"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "register"]
+            },
+            "description": "Register a new user.\n\n**Required Fields (All):**\n- firstName: User's first name\n- lastName: User's last name\n- email: Valid email address\n- password: Minimum 6 characters\n\n**Response:**\n- User created with status: PENDING\n- 4-digit OTP sent to email via Mailchimp\n- OTP expires in 10 minutes\n- Check email for verification code"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Verify OTP (Auto-Redirect to Payment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set('access_token', response.data.token);",
+                  "        console.log('✅ OTP verified! Token saved. User email is now verified.');",
+                  "    }",
+                  "    if (response.data && response.data.payment) {",
+                  "        pm.collectionVariables.set('stripe_session_id', response.data.payment.sessionId);",
+                  "        console.log('💳 Payment session created automatically!');",
+                  "        console.log('Session ID:', response.data.payment.sessionId);",
+                  "        console.log('🌐 Payment URL:', response.data.payment.url);",
+                  "        const amountInCents = response.data.payment.amount || 999;",
+                  "        const amountInEuros = (amountInCents / 100).toFixed(2);",
+                  "        const currency = response.data.payment.currency || 'eur';",
+                  "        console.log(`💰 Amount: ${amountInCents} cents (€${amountInEuros})`);",
+                  "        console.log('🧪 Test Card: 4242 4242 4242 4242, any future date, any CVC');",
+                  "        console.log('🍎 Apple Pay: Available on Safari/iOS devices automatically');",
+                  "        console.log('👉 Open the URL above in browser to complete payment');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ OTP verification failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"code\": \"1234\",\n  \"amount\": 999\n}\n\n// NOTES:\n// - email (required): User's email address\n// - code (required): 4-digit OTP from email\n// - amount (optional): Payment amount in CENTS\n//   * ⚠️ IMPORTANT: Always send amount in CENTS, not euros!\n//   * If not provided, defaults to 999 cents (€9.99)\n//   * Examples: 999 (€9.99), 1999 (€19.99), 2999 (€29.99)\n//   * Backend converts cents to euros for database storage\n//   * Always charged in EUR currency"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/verify-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "verify-otp"]
+            },
+            "description": "Verify the OTP code sent to email. Automatically creates Stripe payment session.\n\n**Required Fields:**\n- email: User's email address\n- code: 4-digit OTP code from email\n\n**Optional Fields:**\n- amount: Payment amount in CENTS (defaults to 999 cents = €9.99)\n  - ⚠️ CRITICAL: Send amount in CENTS, not euros!\n  - Examples: 999 (€9.99 Basic), 1999 (€19.99 Premium), 2999 (€29.99 Pro)\n  - Backend automatically converts cents → euros for database storage\n  - Stripe receives the amount in cents as required\n  - Always charged in EUR currency\n\n**Special Behavior - Payment Retry:**\nIf user's email is already verified (isEmailVerified=true) AND status is PENDING:\n- Skips OTP verification\n- Creates new Stripe payment session immediately\n- Allows users who cancelled payment to retry without new OTP\n- Returns existing token + new payment URL\n\n**Response:**\n- JWT token (store in localStorage, valid 7 days)\n- Stripe payment session with sessionId\n- Payment URL for redirect to Stripe checkout\n- User status changes from PENDING → ready for payment"
+          },
+          "response": []
+        },
+        {
+          "name": "2b. Resend OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ New OTP sent! Check email.');",
+                  "} else {",
+                  "    console.log('❌ Failed to resend OTP:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/resend-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "resend-otp"]
+            },
+            "description": "Request a new OTP code if the previous one expired or was not received.\n\n**Required Fields:**\n- email: User's email address\n\n**Use Cases:**\n- OTP code expired (10 minutes)\n- Email not received\n- Need to resend verification code"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set('access_token', response.data.token);",
+                  "        console.log('✅ Login successful! Token saved.');",
+                  "        console.log('User:', response.data.user.fullName);",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Login failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "// ===== ADMIN LOGIN =====\n{\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\"\n}\n\n// ===== USER LOGIN =====\n// {\n//   \"email\": \"user@example.com\",\n//   \"password\": \"user123\"\n// }"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "login"]
+            },
+            "description": "Login with email and password.\n\n**Required Fields (All):**\n- email: User's email address\n- password: User's password\n\n**Requirements:**\n- Email must be verified (isEmailVerified=true)\n- User status must be ACTIVE (payment completed)\n\n**Response:**\n- JWT token (valid for 7 days)\n- User details with active status"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ User details retrieved');",
+                  "    console.log('Name:', response.data.user.fullName);",
+                  "    console.log('Email:', response.data.user.email);",
+                  "    console.log('Status:', response.data.user.status);",
+                  "    console.log('Email Verified:', response.data.user.isEmailVerified);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", "me"]
+            },
+            "description": "Get current authenticated user details.\n\n**Authentication Required:** Bearer token\n\n**No Parameters Required**\n\n**Response:**\n- User ID\n- Email, firstName, lastName, fullName\n- Role (USER/ADMIN)\n- Status (ACTIVE/INACTIVE)\n- isEmailVerified (true/false)\n- homeAirport\n- Creation date\n\n**Use Cases:**\n- Check if user is logged in\n- Display user profile\n- Verify account status"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Logged out successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "logout"]
+            },
+            "description": "Logout current user.\n\n**Authentication Required:** Bearer token\n\n**No Parameters Required**\n\n**What This Does:**\n- Invalidates JWT token on server side\n- User must login again to access protected routes\n\n**Frontend Action:**\n- Remove token from localStorage\n- Redirect to login page\n\n**Note:** In stateless JWT setup, logout is primarily handled client-side"
+          },
+          "response": []
+        },
+        {
+          "name": "6. Forgot Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Password reset OTP sent! Check email.');",
+                  "    console.log('⏰ OTP expires in 10 minutes');",
+                  "} else {",
+                  "    console.log('❌ Failed to send OTP:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}\n\n// NOTES:\n// - email (required): User's registered email address\n// - OTP will be sent to this email\n// - OTP is valid for 10 minutes"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "forgot-password"]
+            },
+            "description": "Request a password reset OTP.\n\n**Required Fields:**\n- email: User's registered email address\n\n**What This Does:**\n1. Checks if user exists with this email\n2. Generates a 4-digit OTP code\n3. Stores OTP in database (valid for 10 minutes)\n4. Sends OTP to user's email via Mailchimp\n\n**OTP Details:**\n- 4-digit numeric code\n- Expires in 10 minutes\n- Can be requested multiple times (old OTPs become invalid)\n\n**Response:**\n- Success message confirming OTP was sent\n- User should check email for the code\n\n**Use Cases:**\n- User forgot their password\n- User wants to reset password securely\n- Accessed from \"Forgot Password\" link on login page\n\n**Security:**\n- No authentication required (user is not logged in)\n- OTP is time-limited\n- One-time use only"
+          },
+          "response": []
+        },
+        {
+          "name": "7. Verify Reset OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.resetToken) {",
+                  "        pm.collectionVariables.set('reset_token', response.data.resetToken);",
+                  "        console.log('✅ OTP verified successfully!');",
+                  "        console.log('🔑 Reset token saved (valid for 5 minutes)');",
+                  "        console.log('👉 You can now proceed to reset your password');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ OTP verification failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"code\": \"1234\"\n}\n\n// NOTES:\n// - email (required): User's email address\n// - code (required): 4-digit OTP from email\n// - Replace '1234' with actual OTP from email\n//\n// RESPONSE:\n// - resetToken: Temporary token (valid for 5 minutes)\n// - Token is automatically saved for next step"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/verify-reset-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "verify-reset-otp"]
+            },
+            "description": "Verify the password reset OTP and get a reset token.\n\n**Required Fields:**\n- email: User's email address\n- code: 4-digit OTP from email\n\n**What This Does:**\n1. Validates the OTP code\n2. Checks if OTP is expired (10 minutes)\n3. Checks if OTP is already used\n4. Generates a temporary reset token (valid for 5 minutes)\n\n**Response:**\n- resetToken: Short-lived JWT token (5 minutes only)\n- Success message\n\n**Validation:**\n- OTP must match email\n- OTP must not be expired\n- OTP must not be already used\n\n**Next Step:**\n- Call \"Reset Password\" endpoint with resetToken + newPassword\n- No need to send email/code again!\n\n**Use Cases:**\n- Verify user has access to the email account\n- Prevent unauthorized password resets\n- Part of 3-step password reset flow\n\n**Security:**\n- No authentication required\n- OTP is single-use\n- Reset token expires in 5 minutes\n- Token is only valid for password reset"
+          },
+          "response": []
+        },
+        {
+          "name": "8. Reset Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Password reset successfully!');",
+                  "    console.log('👉 You can now login with your new password');",
+                  "    pm.collectionVariables.set('reset_token', ''); // Clear token after use",
+                  "} else {",
+                  "    console.log('❌ Password reset failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"{{reset_token}}\",\n  \"newPassword\": \"NewPass123!\"\n}\n\n// NOTES:\n// - resetToken (required): Token from \"Verify Reset OTP\" step (automatically saved)\n// - newPassword (required): New password (min 8 chars, uppercase, lowercase, number, special char)\n//\n// IMPORTANT: You MUST call \"Verify Reset OTP\" first to get the resetToken!\n// The token is valid for 5 minutes only.\n//\n// PASSWORD REQUIREMENTS:\n// - At least 8 characters\n// - At least one uppercase letter (A-Z)\n// - At least one lowercase letter (a-z)\n// - At least one number (0-9)\n// - At least one special character (@#$%^&*()_+-=[]{};\\':\"|,.<>/?)"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "auth", "reset-password"]
+            },
+            "description": "Reset user password with reset token (from Verify Reset OTP step).\n\n**Required Fields:**\n- resetToken: Token from \"Verify Reset OTP\" step (valid for 5 minutes)\n- newPassword: New password meeting requirements\n\n**Password Requirements:**\n- Minimum 8 characters\n- At least one uppercase letter (A-Z)\n- At least one lowercase letter (a-z)\n- At least one number (0-9)\n- At least one special character (@#$%^&*()_+-=[]{};\\':\"|,.<>/?)\n\n**What This Does:**\n1. Verifies the reset token is valid and not expired\n2. Validates new password meets requirements\n3. Hashes new password securely\n4. Updates user's password in database\n5. Marks OTP as used (cannot be reused)\n\n**Response:**\n- Success message\n- User can now login with new password\n\n**Prerequisites:**\n- Must call \"Forgot Password\" first to get OTP via email\n- Must call \"Verify Reset OTP\" to get reset token (saves automatically in {{reset_token}})\n- Token must not be expired (5 minutes validity)\n\n**Complete Password Reset Flow:**\n1. Forgot Password (email) → OTP sent to email\n2. Verify Reset OTP (email + code) → Reset token returned & saved\n3. Reset Password (resetToken + newPassword) → Password updated ← YOU ARE HERE\n4. Login with new password → Access granted\n\n**Security:**\n- No authentication required for forgotten password flow\n- Reset token is short-lived (5 minutes only)\n- OTP is marked as used after successful reset\n- Password is securely hashed before storage\n- Old password is invalidated\n\n**Simplified:**\n- No need to send email/code again!\n- Just use resetToken (from previous step) + newPassword\n- Token expires in 5 minutes after OTP verification"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete authentication flow with flexible payment amounts and password reset.\n\n**Recommended Flow:**\n1. Register (firstName, lastName, email, password) - ALL REQUIRED\n2. Check email for 4-digit OTP\n3. Verify OTP (email, code) + OPTIONAL amount in CENTS - Auto-creates Stripe session\n4. Complete payment on Stripe (999 cents = €9.99 default or custom amount)\n5. Verify payment (sessionId) - Activates account\n6. Login (email, password) - Access granted\n\n**Password Reset Flow:**\n1. Forgot Password (email) → OTP sent to email\n2. Verify Reset OTP (email, code) → Reset token returned (5 min)\n3. Reset Password (resetToken, newPassword) → Password updated\n4. Login with new password → Access granted\n\n**Payment Retry Flow:**\nIf user cancelled Stripe payment after OTP verification:\n1. User has token + email verified + status PENDING\n2. Option A: Call \"Verify OTP\" again → Creates new payment session\n3. Option B: Call \"Complete Payment (Retry)\" → Direct to payment without OTP\n\n**Field Requirements:**\n- Register: ALL fields required\n- Verify OTP: email + code required, amount optional (in CENTS)\n- Resend OTP: email required\n- Login: email + password required\n- Password Reset: 3-step flow with OTP + token verification\n\n**Payment:**\n- ⚠️ IMPORTANT: Always send amounts in CENTS\n- Default: 999 cents (€9.99)\n- Examples: 999 (€9.99), 1999 (€19.99), 2999 (€29.99)\n- Backend converts to euros for database storage\n- Specified during OTP verification or payment creation\n\n**Password Requirements:**\n- Minimum 8 characters\n- Uppercase, lowercase, number, special character required"
+    },
+    {
+      "name": "Payment Flow (Stripe)",
+      "item": [
+        {
+          "name": "1. Get Stripe Config",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Stripe Publishable Key:', response.data.publishableKey);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payment/config",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payment", "config"]
+            },
+            "description": "Get Stripe publishable key for frontend integration.\n\n**No Parameters Required**\n\n**Response:**\n- Stripe publishable key (pk_test_...)\n- Used for frontend Stripe.js integration\n\n**Note:** This is a public endpoint (no authentication required)"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Complete Payment (Retry - No OTP)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.sessionId) {",
+                  "        pm.collectionVariables.set('stripe_session_id', response.data.sessionId);",
+                  "        console.log('✅ Payment retry session created!');",
+                  "        console.log('🔄 User already verified email - skipping OTP');",
+                  "        console.log('Session ID:', response.data.sessionId);",
+                  "        console.log('🌐 Payment URL:', response.data.url);",
+                  "        const amount = response.data.amount || 999;",
+                  "        const currency = response.data.currency || 'eur';",
+                  "        console.log(`💳 Amount: ${(amount/100).toFixed(2)} ${currency.toUpperCase()}`);",
+                  "        console.log('Test Card: 4242 4242 4242 4242, any future date, any CVC');",
+                  "        console.log('👉 Open this URL in browser to complete payment');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to create session:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 999\n}\n\n// NOTES:\n// - amount (optional): Payment amount in CENTS\n//   * If not provided, defaults to 999 cents (€9.99)\n//   * Examples: 999 = €9.99, 1999 = €19.99\n//   * IMPORTANT: Send amount in CENTS not euros\n//\n// AUTH REQUIRED:\n// - Bearer token in Authorization header\n// - User must have status = PENDING (email verified, payment incomplete)\n//\n// USE CASE:\n// - User verified OTP but cancelled/closed Stripe payment\n// - User returns later and clicks \"Complete Payment\" button\n// - Creates NEW Stripe session WITHOUT requiring OTP again\n//\n// FLOW DIFFERENCES:\n// - OTP Verification → Creates payment session AFTER verifying code\n// - This Endpoint → Creates payment session directly (no OTP needed)\n//   * Because email already verified\n//   * User just needs to complete payment"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payment/create-checkout-session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payment", "create-checkout-session"]
+            },
+            "description": "🔄 **PAYMENT RETRY ENDPOINT** - For users who verified email but didn't complete payment.\n\n**Authentication Required:** Bearer token (from OTP verification)\n\n**User Requirements:**\n- Email verified (isEmailVerified = true)\n- Status = PENDING (payment not completed)\n- Has valid auth token\n\n**When to Use:**\n1. User verified OTP → Got payment URL → Cancelled/closed payment\n2. User returns later (minutes/hours/days)\n3. User clicks \"Complete Payment\" button\n4. Frontend calls THIS endpoint (NOT OTP verification)\n5. User redirected DIRECTLY to Stripe\n\n**Amount Format:**\n- Send in CENTS (999 = €9.99)\n- If omitted, defaults to 999 cents\n- Backend passes to Stripe as-is (no multiplication)\n- Database stores converted to euros (9.99)\n\n**Advantages Over OTP Flow:**\n- ✅ Skips OTP verification (already verified)\n- ✅ Faster user experience\n- ✅ Works even if OTP expired\n- ✅ Creates fresh Stripe session each time\n- ✅ Unlimited retry attempts\n\n**Error Responses:**\n- 401: Token missing/invalid\n- 403: Email not verified (redirect to OTP)\n- 400: Already active (redirect to dashboard)\n\n**Response:**\n- New Stripe checkout session\n- Payment URL for immediate redirect\n- Session valid for 24 hours"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Create Checkout Session (Manual)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.sessionId) {",
+                  "        pm.collectionVariables.set('stripe_session_id', response.data.sessionId);",
+                  "        console.log('✅ Checkout session created!');",
+                  "        console.log('Session ID:', response.data.sessionId);",
+                  "        console.log('🌐 Payment URL:', response.data.url);",
+                  "        const amount = response.data.amount || 999;",
+                  "        const currency = response.data.currency || 'eur';",
+                  "        console.log(`💳 Amount: ${(amount/100).toFixed(2)} ${currency.toUpperCase()}`);",
+                  "        console.log('Test Card: 4242 4242 4242 4242, any future date, any CVC');",
+                  "        console.log('Apple Pay: Available on Safari/iOS automatically');",
+                  "        console.log('👉 Open this URL in browser to complete payment');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to create session:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 999\n}\n\n// NOTES:\n// - amount (optional): Payment amount in CENTS\n//   * If not provided, defaults to 999 cents (€9.99)\n//   * Examples: 999 = €9.99, 1999 = €19.99\n//   * Always in CENTS (frontend responsibility)\n//\n// AUTH REQUIRED: Bearer token in Authorization header"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payment/create-checkout-session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payment", "create-checkout-session"]
+            },
+            "description": "Create Stripe checkout session manually (usually not needed - payment session auto-created during OTP verification).\n\n**Authentication Required:** Bearer token\n\n**Optional Fields:**\n- amount: Payment amount in CENTS (defaults to 999 = €9.99)\n  - Examples: 999, 1999, 2999\n\n**Requirements:**\n- User must be authenticated (JWT token)\n- User email must be verified\n\n**Use Cases:**\n- Payment session expired (24 hours)\n- Retry after failed payment\n- User wants to change payment amount\n\n**Response:**\n- Stripe checkout session ID\n- Payment URL for redirect\n- Amount and currency details"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Verify Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Payment verified successfully!');",
+                  "    console.log('User Status:', response.data.user.status);",
+                  "    console.log('Subscription ID:', response.data.subscription.id);",
+                  "    console.log('🎉 Account is now ACTIVE! You can login.');",
+                  "} else {",
+                  "    console.log('❌ Payment verification failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{stripe_session_id}}\"\n}\n\n// NOTES:\n// - sessionId (required): Stripe checkout session ID\n//   * Received from OTP verification response\n//   * Or from create-checkout-session response\n//   * Format: cs_test_xxxxxxxxxx"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payment/verify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payment", "verify"]
+            },
+            "description": "Verify payment completion and activate user account.\n\n**Required Fields:**\n- sessionId: Stripe checkout session ID\n\n**What This Does:**\n1. Checks Stripe payment status\n2. Creates subscription record (1 year from payment date)\n3. Creates payment record with transaction details\n4. Updates user status: PENDING → ACTIVE\n5. Sends welcome email (Mailchimp)\n\n**When to Call:**\n- After user completes payment on Stripe\n- Stripe redirects to: yoursite.com/payment/success?session_id=cs_xxx\n- Extract session_id from URL and call this endpoint\n\n**Response:**\n- Updated user with ACTIVE status\n- Subscription details (start/end dates)\n- Payment amount confirmation"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Create Gift Checkout Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.sessionId) {",
+                  "        pm.collectionVariables.set('stripe_session_id', response.data.sessionId);",
+                  "        console.log('✅ Gift checkout session created!');",
+                  "        console.log('Session ID:', response.data.sessionId);",
+                  "        console.log('🌐 Payment URL:', response.data.url);",
+                  "        console.log('🎁 Recipient Email:', response.data.recipientEmail);",
+                  "        const amountInCents = response.data.amount || 999;",
+                  "        const amountInEuros = (amountInCents / 100).toFixed(2);",
+                  "        const currency = response.data.currency || 'eur';",
+                  "        console.log(`💳 Amount: ${amountInCents} cents (€${amountInEuros})`);",
+                  "        console.log('👉 Open this URL in browser to complete gift payment');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to create gift session:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientEmail\": \"recipient@example.com\",\n  \"recipientPassword\": \"GiftPass123!\",\n  \"recipientFirstName\": \"John\",\n  \"recipientLastName\": \"Doe\",\n  \"amount\": 999\n}\n\n// NOTES:\n// - recipientEmail (required): Email for the new gift recipient account\n// - recipientPassword (required): Password for recipient (min 8 chars, uppercase, lowercase, number, special char)\n// - recipientFirstName (required): Recipient's first name\n// - recipientLastName (required): Recipient's last name\n// - amount (optional): Payment amount in CENTS (defaults to 999 cents = €9.99)\n//   * ⚠️ IMPORTANT: Always send amount in CENTS, not euros!\n//   * Examples: 999 (€9.99), 1999 (€19.99), 2999 (€29.99)\n//\n// AUTH REQUIRED: Bearer token of the gifter (logged-in user)\n//\n// PASSWORD REQUIREMENTS:\n// - At least 8 characters\n// - At least one uppercase letter\n// - At least one lowercase letter\n// - At least one number\n// - At least one special character (@#$%^&*()_+-=[]{};\\':\"|,.<>/?)"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payment/gift/create-checkout-session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payment", "gift", "create-checkout-session"]
+            },
+            "description": "Create a Stripe checkout session to gift a subscription to another user.\n\n**Authentication Required:** Bearer token (gifter must be logged in)\n\n**Required Fields:**\n- recipientEmail: Email address for recipient's account\n- recipientPassword: Password for recipient (must meet security requirements)\n- recipientFirstName: Recipient's first name\n- recipientLastName: Recipient's last name\n\n**Optional Fields:**\n- amount: Payment amount in CENTS (defaults to 999 cents = €9.99)\n  - ⚠️ CRITICAL: Send amount in CENTS, not euros!\n  - Examples: 999 (€9.99), 1999 (€19.99), 2999 (€29.99)\n  - Backend automatically converts cents → euros for database storage\n  - Stripe receives the amount in cents as required\n\n**Password Requirements:**\n- Minimum 8 characters\n- At least one uppercase letter (A-Z)\n- At least one lowercase letter (a-z)\n- At least one number (0-9)\n- At least one special character (@#$%^&*()_+-=[]{};\\':\"|,.<>/?)\n\n**What Happens:**\n1. Validates all recipient details\n2. Checks recipient email doesn't already exist\n3. Creates Stripe checkout session for gifter to pay\n4. Stores gift details in session metadata\n5. Returns payment URL for gifter\n\n**After Payment:**\n- Recipient account is created automatically\n- Subscription is activated immediately\n- Recipient receives email with login credentials\n- No email verification needed for gift recipients\n\n**Use Case:**\n- User wants to gift a membership to friend/family\n- Accessed from user dashboard \"Gift Subscription\" option"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Verify Gift Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Gift payment verified successfully!');",
+                  "    console.log('🎁 Recipient Account Created');",
+                  "    console.log('Recipient Email:', response.data.recipient.email);",
+                  "    console.log('Recipient Name:', response.data.recipient.firstName, response.data.recipient.lastName);",
+                  "    console.log('Subscription Active:', response.data.subscription.isGifted ? 'Yes (Gifted)' : 'Yes');",
+                  "    console.log('🎉 Gift email sent to recipient with login credentials!');",
+                  "} else {",
+                  "    console.log('❌ Gift payment verification failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{stripe_session_id}}\"\n}\n\n// NOTES:\n// - sessionId (required): Stripe checkout session ID from gift checkout\n//   * Received from create-gift-checkout-session response\n//   * Format: cs_test_xxxxxxxxxx\n//   * Extracted from success URL: ?session_id=cs_xxx&gift=true"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/payment/gift/verify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "payment", "gift", "verify"]
+            },
+            "description": "Verify gift payment and create recipient account.\n\n**Required Fields:**\n- sessionId: Stripe checkout session ID\n\n**What This Does:**\n1. Verifies payment was completed on Stripe\n2. Creates new user account for recipient with:\n   - Email and password from gift session\n   - Email verification bypassed (set to true)\n   - Status immediately set to ACTIVE\n3. Creates subscription record:\n   - 1-year membership\n   - Marked as gifted (isGifted: true)\n   - Links to gifter (giftedBy: gifter's user ID)\n4. Creates payment record\n5. Sends gift notification email to recipient with:\n   - Who gifted them the subscription\n   - Login credentials (email + password)\n   - Membership benefits\n   - Direct login link\n\n**When to Call:**\n- After gifter completes payment on Stripe\n- Stripe redirects to: yoursite.com/payment/success?session_id=cs_xxx&gift=true\n- Extract session_id from URL and call this endpoint\n- Check for gift=true parameter to distinguish from regular payment\n\n**Response:**\n- Recipient account details\n- Subscription information\n- Confirmation that gift email was sent\n\n**Important:**\n- Recipient account is created ONLY after successful payment\n- Recipient can login immediately (no email verification needed)\n- Gifter's name is included in recipient's welcome email"
+          },
+          "response": []
+        }
+      ],
+      "description": "Stripe payment integration with flexible amounts (default €9.99).\n\n**Normal Flow (Recommended):**\n1. Register → Verify OTP (payment auto-created) → Pay on Stripe → Verify Payment\n\n**Manual Flow (Backup):**\n1. Get Config → Create Session → Pay on Stripe → Verify Payment\n\n**Gift Subscription Flow:**\n1. Login as User → Create Gift Checkout Session → Pay on Stripe → Verify Gift Payment → Recipient Receives Email\n\n**Payment Details:**\n- Currency: EUR (euro)\n- Default Amount: €9.99\n- Custom amounts supported (frontend can specify)\n- Payment Methods: Credit/Debit Cards + Apple Pay 🍎\n- Test Card: 4242 4242 4242 4242\n- Apple Pay: Auto-available on Safari/iOS"
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Profile retrieved');",
+                  "    console.log('Name:', response.data.user.fullName);",
+                  "    console.log('Email:', response.data.user.email);",
+                  "    console.log('Home Airport:', response.data.user.homeAirport || 'Not set');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", "me"]
+            },
+            "description": "Get current authenticated user's profile details.\n\n**Authentication Required:** Bearer token\n\n**Response:**\n- User ID, email, firstName, lastName, fullName\n- Role, status, isEmailVerified\n- homeAirport\n- createdAt, updatedAt"
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Profile updated successfully');",
+                  "    console.log('Name:', response.data.user.fullName);",
+                  "} else {",
+                  "    console.log('❌ Update failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newPassword456\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}\n\n// REQUIRED FIELDS:\n// - currentPassword: Current password for verification\n// - newPassword: New password (min 8 characters)\n//\n// OPTIONAL FIELDS:\n// - firstName: Update first name\n// - lastName: Update last name\n//\n// NOTE:\n// - Email cannot be changed\n// - Both passwords are required\n// - Password must be at least 8 characters"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", "me"]
+            },
+            "description": "Update current user's profile information.\n\n**Authentication Required:** Bearer token\n\n**Required Fields:**\n- currentPassword: Current password for verification\n- newPassword: New password (min 8 characters)\n\n**Optional Fields:**\n- firstName: Update first name\n- lastName: Update last name\n\n**Restrictions:**\n- Email cannot be changed\n- Current password verification required\n- New password must be at least 8 characters\n\n**Response:**\n- Updated user profile (password not included)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Home Airport",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Home airport updated');",
+                  "    console.log('New airport:', response.data.user.homeAirport);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"homeAirport\": \"LAX\"\n}\n\n// REQUIRED FIELD:\n// - homeAirport: Airport code (e.g., LAX, JFK, LHR)\n//\n// NOTE:\n// - No password verification required for airport update\n// - Separate endpoint for easier frontend integration"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/me/home-airport",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", "me", "home-airport"]
+            },
+            "description": "Update user's home airport.\n\n**Authentication Required:** Bearer token\n\n**Required Field:**\n- homeAirport: Airport code (e.g., LAX, JFK, LHR)\n\n**No Password Required**\n\n**Response:**\n- Updated user profile with new home airport"
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Users retrieved');",
+                  "    console.log('Total users:', response.data.pagination.total);",
+                  "    console.log('Current page:', response.data.pagination.page);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users?page=1&limit=10&search=&status=ACTIVE&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Results per page (default: 10)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name or email"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Filter by status (ACTIVE or INACTIVE)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field (createdAt, email, etc.)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order (asc/desc)"
+                }
+              ]
+            },
+            "description": "Get all users with pagination, search, filtering, and sorting.\n\n**Authentication Required:** Admin role\n\n**Query Parameters (All Optional):**\n- page: Page number (default: 1)\n- limit: Results per page (default: 10)\n- search: Search by name or email\n- status: Filter by status (ACTIVE or INACTIVE)\n- sortBy: Sort field (createdAt, email, etc.)\n- sortOrder: asc or desc\n\n**Response:**\n- users: Array of user objects\n- pagination: Page info (total, pages, hasNext, hasPrev)"
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Get User by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ User retrieved');",
+                  "    console.log('Name:', response.data.user.fullName);",
+                  "    console.log('Email:', response.data.user.email);",
+                  "    console.log('Status:', response.data.user.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-id-here",
+                  "description": "User UUID"
+                }
+              ]
+            },
+            "description": "Get specific user by ID.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: User UUID\n\n**Response:**\n- Full user profile details"
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Update User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ User updated successfully');",
+                  "    console.log('Name:', response.data.user.fullName);",
+                  "    console.log('Status:', response.data.user.status);",
+                  "    console.log('Role:', response.data.user.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"homeAirport\": \"LAX\",\n  \"status\": \"ACTIVE\",\n  \"role\": \"USER\"\n}\n\n// ALL FIELDS OPTIONAL:\n// - firstName: Update first name\n// - lastName: Update last name\n// - homeAirport: Update home airport code\n// - status: Update status (ACTIVE or INACTIVE)\n// - role: Update role (USER/ADMIN)\n//\n// NOTE:\n// - Admin can update any field without password\n// - Email cannot be changed\n// - password cannot be changed (user must do it themselves)"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-id-here",
+                  "description": "User UUID"
+                }
+              ]
+            },
+            "description": "Update user details (Admin only).\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: User UUID\n\n**Optional Fields:**\n- firstName: Update first name\n- lastName: Update last name\n- homeAirport: Update home airport\n- status: ACTIVE or INACTIVE\n- role: USER/ADMIN\n\n**Restrictions:**\n- Email cannot be changed\n- Password cannot be changed (user must update themselves)\n- No password verification required for admin updates\n\n**Response:**\n- Updated user profile"
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ User deleted successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "user-id-here",
+                  "description": "User UUID"
+                }
+              ]
+            },
+            "description": "Delete user by ID.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: User UUID\n\n**Warning:**\n- Permanent deletion\n- Cannot be undone"
+          },
+          "response": []
+        }
+      ],
+      "description": "User profile management and admin operations.\n\n**User Endpoints:**\n- GET /users/me - Get current user profile\n- PUT /users/me - Update profile (requires current & new password)\n- PUT /users/me/home-airport - Update home airport (no password)\n\n**Admin Endpoints:**\n- GET /users - List all users with pagination\n- GET /users/:id - Get specific user\n- PUT /users/:id - Update any user (no password required)\n- DELETE /users/:id - Delete any user\n\n**Security:**\n- Profile updates require password verification\n- Email cannot be changed by anyone\n- Users cannot delete their own account\n- Admin endpoints require ADMIN role\n- Admin can update user status and role"
+    },
+    {
+      "name": "Travel Guides Management",
+      "item": [
+        {
+          "name": "Get Top Travel Guides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides/top",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides", "top"]
+            },
+            "description": "Get top 3 travel guides (Public - no authentication required). Returns latest 3 guides."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Travel Guides (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides?page=1&limit=10&search=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Results per page (default: 10)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by title or location"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field (createdAt, title, etc.)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order (asc/desc)"
+                }
+              ]
+            },
+            "description": "Get all travel guides with pagination and search (Authenticated users)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Travel Guide by ID (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "guide-id-here",
+                  "description": "Travel Guide UUID"
+                }
+              ]
+            },
+            "description": "Get specific travel guide by ID (Authenticated users)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Travel Guides (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Travel guides retrieved');",
+                  "    console.log('Total guides:', response.data.pagination.total);",
+                  "    console.log('Current page:', response.data.pagination.page);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides?page=1&limit=10&search=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Results per page (default: 10)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by title or location"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field (createdAt, title, etc.)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order (asc/desc)"
+                }
+              ]
+            },
+            "description": "Get all travel guides with pagination and search.\n\n**Authentication Required:** Admin role\n\n**Query Parameters (All Optional):**\n- page: Page number (default: 1)\n- limit: Results per page (default: 10)\n- search: Search by title or location\n- sortBy: Sort field (createdAt, title, etc.)\n- sortOrder: asc or desc\n\n**Response:**\n- guides: Array of travel guide objects\n- pagination: Page info (total, pages, hasNext, hasPrev)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Travel Guide by ID (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Guide retrieved');",
+                  "    console.log('Title:', response.data.guide.title);",
+                  "    console.log('Location:', response.data.guide.location);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "guide-id-here",
+                  "description": "Travel Guide UUID"
+                }
+              ]
+            },
+            "description": "Get specific travel guide by ID.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Guide UUID\n\n**Response:**\n- Complete guide details including content structure"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Travel Guide (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Travel guide created');",
+                  "    console.log('ID:', response.data.guide.id);",
+                  "    console.log('Title:', response.data.guide.title);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "heroImage",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload hero image file (optional)"
+                },
+                {
+                  "key": "title",
+                  "value": "Abu Dhabi",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Discover the stunning capital of the UAE, home to architectural marvels, world-class museums, and Arabian hospitality.",
+                  "type": "text",
+                  "description": "Brief description of the guide (required)"
+                },
+                {
+                  "key": "category",
+                  "value": "Cultural",
+                  "type": "text",
+                  "description": "Guide category: Cultural, Adventure, Food, Nature, etc. (required)"
+                },
+                {
+                  "key": "location",
+                  "value": "Abu Dhabi, UAE",
+                  "type": "text"
+                },
+                {
+                  "key": "readTime",
+                  "value": "10 min",
+                  "type": "text"
+                },
+                {
+                  "key": "content",
+                  "value": "[{\"tabName\":\"Airport Transport\",\"mainTitle\":\"How to get from the airport to the city\",\"sections\":[{\"subHeading\":\"Taxi\",\"description\":\"Taxis are available 24/7 outside the terminal. Cost around 70-100 AED to city center.\"},{\"subHeading\":\"Bus\",\"description\":\"Public buses run every 40 minutes. Route A1 goes to the main bus station.\"}]},{\"tabName\":\"Things to Do\",\"mainTitle\":\"What to do in Abu Dhabi\",\"sections\":[{\"subHeading\":\"Grand Mosque\",\"description\":\"Visit the stunning Sheikh Zayed Grand Mosque, one of the world's largest mosques.\"},{\"subHeading\":\"Louvre Abu Dhabi\",\"description\":\"Explore world-class art collections in this stunning waterfront museum.\"}]},{\"tabName\":\"Where to Eat\",\"mainTitle\":\"Best restaurants\",\"sections\":[{\"subHeading\":\"Li Beirut\",\"description\":\"Authentic Lebanese cuisine with amazing views.\"}]}]",
+                  "type": "text",
+                  "description": "Content as JSON string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides"]
+            },
+            "description": "Create new travel guide with image upload.\n\n**Authentication Required:** Admin role\n\n**Form Data Fields:**\n- heroImage: Image file (optional) - Backend will convert to URL\n- title: Guide title (required)\n- description: Brief description of the guide (required)\n- category: Guide category - Cultural, Adventure, Food, Nature, etc. (required)\n- location: City/country (required)\n- readTime: Reading time (e.g., 10 min) (required)\n- content: JSON string of content array (required)\n\n**Content Structure (as JSON string):**\nEach tab object contains:\n- tabName: Tab label (e.g., Airport Transport)\n- mainTitle: Section title\n- sections: Array of items with:\n  - subHeading: Item title\n  - description: Item content\n\n**How it works:**\n1. Frontend sends image file + JSON data\n2. Backend uploads image and generates URL\n3. Saves guide with auto-generated image URL\n4. Returns complete guide with accessible image link\n\n**Response:**\n- Created travel guide with ID and heroImage URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Travel Guide (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Travel guide updated');",
+                  "    console.log('Title:', response.data.guide.title);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "heroImage",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload new hero image (optional)"
+                },
+                {
+                  "key": "title",
+                  "value": "Abu Dhabi - Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description: Discover the stunning capital of the UAE with its blend of tradition and modernity.",
+                  "type": "text",
+                  "description": "Brief description (optional)"
+                },
+                {
+                  "key": "category",
+                  "value": "Cultural",
+                  "type": "text",
+                  "description": "Guide category (optional)"
+                },
+                {
+                  "key": "location",
+                  "value": "Abu Dhabi, UAE",
+                  "type": "text"
+                },
+                {
+                  "key": "readTime",
+                  "value": "12 min",
+                  "type": "text"
+                },
+                {
+                  "key": "content",
+                  "value": "[{\"tabName\":\"Airport Transport\",\"mainTitle\":\"Updated transport guide\",\"sections\":[{\"subHeading\":\"Taxi\",\"description\":\"Updated taxi information...\"}]}]",
+                  "type": "text",
+                  "description": "Content as JSON string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "guide-id-here",
+                  "description": "Travel Guide UUID"
+                }
+              ]
+            },
+            "description": "Update existing travel guide with optional image upload.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Guide UUID\n\n**Form Data Fields (all optional):**\n- heroImage: New image file - Backend will convert to URL\n- title: Guide title\n- description: Brief description of the guide\n- category: Guide category - Cultural, Adventure, Food, Nature, etc.\n- location: City/country\n- readTime: Reading time\n- content: Complete content array as JSON string\n\n**How it works:**\n1. If new image uploaded, backend generates new URL\n2. Updates only the fields you send\n3. Returns updated guide with image URL\n\n**Note:**\n- Only send fields you want to update\n- If updating content, send the complete content array\n- Partial content updates not supported\n\n**Response:**\n- Updated travel guide with image URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Travel Guide (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Travel guide deleted successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-guides/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-guides", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "guide-id-here",
+                  "description": "Travel Guide UUID"
+                }
+              ]
+            },
+            "description": "Delete travel guide by ID.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Guide UUID\n\n**Warning:**\n- Permanent deletion\n- Cannot be undone"
+          },
+          "response": []
+        }
+      ],
+      "description": "Travel guides management for admin.\n\n**All Endpoints:**\n- GET /travel-guides - List all guides with pagination/search\n- GET /travel-guides/:id - Get specific guide\n- POST /travel-guides - Create new guide\n- PUT /travel-guides/:id - Update guide\n- DELETE /travel-guides/:id - Delete guide\n\n**Content Structure:**\nGuides have dynamic content organized in tabs:\n- Each tab contains a main title and sections\n- Each section has a sub-heading and description\n- Supports markdown formatting in descriptions\n\n**Security:**\n- All endpoints require ADMIN role\n- Authentication token required"
+    },
+    {
+      "name": "Travel Deals Management",
+      "item": [
+        {
+          "name": "Get All Travel Deals (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Retrieved', response.data.pagination.total, 'travel deals');",
+                  "    console.log('Page:', response.data.pagination.page, '/', response.data.pagination.totalPages);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals?page=1&limit=10&search=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10, max: 50)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in title, destination, or airport"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: ACTIVE, EXPIRED, or FEATURED"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort by field (createdAt, price, title, etc.)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc or desc"
+                }
+              ]
+            },
+            "description": "Get all travel deals with pagination, filtering, and search.\n\n**Authentication Required:** Admin role\n\n**Query Parameters:**\n- page: Page number (default: 1)\n- limit: Items per page (default: 10, max: 50)\n- search: Search in title, destination, or airport\n- status: Filter by ACTIVE, EXPIRED, or FEATURED\n- sortBy: Field to sort by (createdAt, price, title, etc.)\n- sortOrder: Sort direction (asc/desc)\n\n**Response:**\n- Array of deals with pagination metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Featured Travel Deals (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/featured?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", "featured"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                }
+              ]
+            },
+            "description": "Get featured travel deals (Public - no authentication required). Use query params for pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Travel Deals (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals?page=1&limit=10&search=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10, max: 50)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in title, destination, or airport"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort by field (createdAt, price, title, etc.)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc or desc"
+                }
+              ]
+            },
+            "description": "Get all travel deals with pagination and search (Authenticated users)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Travel Deal by ID (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "deal-id-here",
+                  "description": "Travel Deal UUID"
+                }
+              ]
+            },
+            "description": "Get specific travel deal by ID (Authenticated users)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Travel Deal by ID (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Deal retrieved:', response.data.deal.title);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "deal-id-here",
+                  "description": "Travel Deal UUID"
+                }
+              ]
+            },
+            "description": "Get single travel deal by ID.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Deal UUID\n\n**Response:**\n- Complete deal information"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Travel Deal (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Travel deal created');",
+                  "    console.log('ID:', response.data.deal.id);",
+                  "    console.log('Title:', response.data.deal.title);",
+                  "    console.log('Image URL:', response.data.deal.dealImage);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "dealImage",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload deal image file (optional)"
+                },
+                {
+                  "key": "title",
+                  "value": "Weekend in Paris",
+                  "type": "text",
+                  "description": "Deal title (required)"
+                },
+                {
+                  "key": "description",
+                  "value": "Enjoy a romantic weekend getaway in the city of lights. Includes 2 nights accommodation.",
+                  "type": "text",
+                  "description": "Deal description (required)"
+                },
+                {
+                  "key": "price",
+                  "value": "299.99",
+                  "type": "text",
+                  "description": "Deal price (required)"
+                },
+                {
+                  "key": "discount",
+                  "value": "15",
+                  "type": "text",
+                  "description": "Discount percentage 0-100 (optional)"
+                },
+                {
+                  "key": "destination",
+                  "value": "Paris, France",
+                  "type": "text",
+                  "description": "Destination (required)"
+                },
+                {
+                  "key": "airport",
+                  "value": "Dublin",
+                  "type": "text",
+                  "description": "Airport category (required)"
+                },
+                {
+                  "key": "travelStartDate",
+                  "value": "2026-04-01",
+                  "type": "text",
+                  "description": "Travel start date YYYY-MM-DD (optional)"
+                },
+                {
+                  "key": "travelEndDate",
+                  "value": "2026-04-03",
+                  "type": "text",
+                  "description": "Travel end date YYYY-MM-DD (optional)"
+                },
+                {
+                  "key": "flightBookingLink",
+                  "value": "https://example.com/flight-booking",
+                  "type": "text",
+                  "description": "Flight booking URL (optional)"
+                },
+                {
+                  "key": "hotelBookingLink",
+                  "value": "https://example.com/hotel-booking",
+                  "type": "text",
+                  "description": "Hotel booking URL (optional)"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "type": "text",
+                  "description": "Deal status: ACTIVE or EXPIRED (optional, default: ACTIVE)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals"]
+            },
+            "description": "Create new travel deal with image upload.\n\n**Authentication Required:** Admin role\n\n**Form Data Fields:**\n- dealImage: Image file (optional) - Backend will convert to URL\n- title: Deal title (required)\n- description: Deal description (required)\n- price: Deal price (required)\n- discount: Discount percentage 0-100 (optional)\n- destination: Destination city/country (required)\n- airport: Airport category (required)\n- travelStartDate: Start date YYYY-MM-DD (optional)\n- travelEndDate: End date YYYY-MM-DD (optional)\n- flightBookingLink: Flight booking URL (optional)\n- hotelBookingLink: Hotel booking URL (optional)\n- status: ACTIVE or EXPIRED (optional, default: ACTIVE)\n\n**How it works:**\n1. Frontend sends image file + form data\n2. Backend uploads image and generates URL\n3. Saves deal with auto-generated image URL\n4. Returns complete deal with accessible image link\n\n**Note:** Use Toggle Featured Status endpoint to mark deals as featured.\n\n**Response:**\n- Created travel deal with ID and dealImage URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Travel Deal (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Travel deal updated');",
+                  "    console.log('Title:', response.data.deal.title);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "dealImage",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload new deal image (optional)"
+                },
+                {
+                  "key": "title",
+                  "value": "Weekend in Paris - Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description...",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "349.99",
+                  "type": "text"
+                },
+                {
+                  "key": "discount",
+                  "value": "20",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "deal-id-here",
+                  "description": "Travel Deal UUID"
+                }
+              ]
+            },
+            "description": "Update existing travel deal with optional image upload.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Deal UUID\n\n**Form Data Fields (all optional):**\n- dealImage: New image file - Backend will convert to URL\n- title: Deal title\n- description: Deal description\n- price: Deal price\n- discount: Discount percentage\n- destination: Destination\n- airport: Airport category\n- travelStartDate: Start date\n- travelEndDate: End date\n- flightBookingLink: Flight booking URL\n- hotelBookingLink: Hotel booking URL\n- status: ACTIVE or EXPIRED\n\n**Note:**\n- Only send fields you want to update\n- If new image uploaded, backend generates new URL\n- Use Toggle Featured Status endpoint to change featured status\n\n**Response:**\n- Updated travel deal with image URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Travel Deal (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Travel deal deleted successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "deal-id-here",
+                  "description": "Travel Deal UUID"
+                }
+              ]
+            },
+            "description": "Delete travel deal by ID.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Deal UUID\n\n**Warning:**\n- Permanent deletion\n- Cannot be undone"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Deal Status (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Status updated to:', response.data.deal.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EXPIRED\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/:id/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", ":id", "status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "deal-id-here",
+                  "description": "Travel Deal UUID"
+                }
+              ]
+            },
+            "description": "Update deal status (ACTIVE or EXPIRED).\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Deal UUID\n\n**Body:**\n- status: ACTIVE or EXPIRED (required)\n\n**Response:**\n- Updated deal"
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Featured Status (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Featured status:', response.data.deal.isFeatured);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/travel-deals/:id/featured",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "travel-deals", ":id", "featured"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "deal-id-here",
+                  "description": "Travel Deal UUID"
+                }
+              ]
+            },
+            "description": "Toggle featured status of a deal.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Travel Deal UUID\n\n**No body required**\n\n**Response:**\n- Updated deal with toggled featured status"
+          },
+          "response": []
+        }
+      ],
+      "description": "Travel deals management for admin.\n\n**All Endpoints:**\n- GET /travel-deals - List all deals with pagination/filtering\n- GET /travel-deals/:id - Get specific deal\n- POST /travel-deals - Create new deal with image upload\n- PUT /travel-deals/:id - Update deal with optional image upload\n- DELETE /travel-deals/:id - Delete deal\n- PATCH /travel-deals/:id/status - Update deal status\n- PATCH /travel-deals/:id/featured - Toggle featured status\n\n**Features:**\n- Image upload support (dealImage field)\n- Automatic image URL generation\n- Search by title, destination, or airport\n- Filter by status (ACTIVE/EXPIRED) and featured\n- Pagination support\n- Discount percentage\n- Travel date range\n- Booking links (flight and hotel)\n\n**Security:**\n- All endpoints require ADMIN role\n- Authentication token required"
+    },
+    {
+      "name": "Giveaway Management",
+      "item": [
+        {
+          "name": "Get Active Giveaway (Public - Homepage)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/public/active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", "public", "active"]
+            },
+            "description": "Get currently active giveaway for homepage display.\n\n**Authentication:** Not required\n\n**Access:** Public (both logged-in and logged-out users)\n\n**Features:**\n- No authentication token needed\n- Returns the first active giveaway found\n- Includes giveaway image, title, description, dates\n- Includes entry count\n- Used for homepage display to all visitors\n\n**Response:**\n- id: Giveaway UUID\n- title: Giveaway title\n- description: Giveaway description\n- giveawayImage: Image URL\n- startDate: Start date/time\n- endDate: End date/time\n- status: Current status (ACTIVE, UPCOMING, EXPIRED, DRAFT)\n- _count.entries: Number of entries/participants\n\n**Use Case:**\n- Homepage giveaway section\n- Display same giveaway to all users (login/logout)\n- Contest preview before login"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Giveaways (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/active?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", "active"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                }
+              ]
+            },
+            "description": "Get active giveaways for authenticated users to view and enter."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Giveaway by ID (User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "giveaway-id-here",
+                  "description": "Giveaway UUID"
+                }
+              ]
+            },
+            "description": "Get specific giveaway details for authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Giveaways (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Retrieved', response.data.pagination.total, 'giveaways');",
+                  "    console.log('Page:', response.data.pagination.page, '/', response.data.pagination.totalPages);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways?page=1&limit=10&search=&status=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10, max: 50)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in title or description"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: DRAFT, UPCOMING, ACTIVE, or EXPIRED"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort by field (createdAt, title, startDate, etc.)"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc or desc"
+                }
+              ]
+            },
+            "description": "Get all giveaways with pagination, filtering, and search.\n\n**Authentication Required:** Admin role\n\n**Query Parameters:**\n- page: Page number (default: 1)\n- limit: Items per page (default: 10, max: 50)\n- search: Search in title or description\n- status: Filter by DRAFT, UPCOMING, ACTIVE, or EXPIRED\n- sortBy: Field to sort by (createdAt, title, startDate, etc.)\n- sortOrder: Sort direction (asc/desc)\n\n**Status Auto-Update:**\n- UPCOMING: startDate > now\n- ACTIVE: startDate <= now && endDate >= now\n- EXPIRED: endDate < now\n- DRAFT: Manual status (not auto-updated)\n\n**Response:**\n- Array of giveaways with entry count and pagination metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Giveaway by ID (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Giveaway retrieved:', response.data.giveaway.title);",
+                  "    console.log('Status:', response.data.giveaway.status);",
+                  "    console.log('Entries:', response.data.giveaway._count.entries);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "giveaway-id-here",
+                  "description": "Giveaway UUID"
+                }
+              ]
+            },
+            "description": "Get single giveaway by ID with entry count.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Giveaway UUID\n\n**Response:**\n- Giveaway details with entry count"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Giveaway (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Giveaway created:', response.data.giveaway.title);",
+                  "    console.log('Status:', response.data.giveaway.status);",
+                  "    console.log('ID:', response.data.giveaway.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "giveawayImage",
+                  "type": "file",
+                  "src": [],
+                  "description": "Giveaway image file (optional)"
+                },
+                {
+                  "key": "title",
+                  "value": "Win a Trip to Paris!",
+                  "type": "text",
+                  "description": "Giveaway title (required)"
+                },
+                {
+                  "key": "description",
+                  "value": "Enter to win an all-expenses-paid trip to Paris for two! Includes flights, 5-night hotel stay, and city tours.",
+                  "type": "text",
+                  "description": "Giveaway description (required)"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-03-01",
+                  "type": "text",
+                  "description": "Start date YYYY-MM-DD (required)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-03-31",
+                  "type": "text",
+                  "description": "End date YYYY-MM-DD (required)"
+                },
+                {
+                  "key": "isMonthlyActive",
+                  "value": "true",
+                  "type": "text",
+                  "description": "Mark as monthly active (optional, default: false)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways"]
+            },
+            "description": "Create new giveaway with image upload.\n\n**Authentication Required:** Admin role\n\n**Form Data Fields:**\n- giveawayImage: Image file (optional) - Backend will convert to URL\n- title: Giveaway title (required)\n- description: Giveaway description (required)\n- startDate: Start date YYYY-MM-DD (required)\n- endDate: End date YYYY-MM-DD (required)\n- isMonthlyActive: true or false (optional, default: false)\n\n**Auto Status:**\n- UPCOMING if startDate > now\n- ACTIVE if between start and end\n- EXPIRED if endDate < now\n\n**Response:**\n- Created giveaway with ID and image URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Giveaway (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Giveaway updated:', response.data.giveaway.title);",
+                  "    console.log('Status:', response.data.giveaway.status);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "giveawayImage",
+                  "type": "file",
+                  "src": [],
+                  "description": "New giveaway image (optional)"
+                },
+                {
+                  "key": "title",
+                  "value": "Updated Giveaway Title",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description text",
+                  "type": "text"
+                },
+                {
+                  "key": "isMonthlyActive",
+                  "value": "false",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "DRAFT",
+                  "type": "text",
+                  "description": "Set to DRAFT to prevent auto-status updates"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "giveaway-id-here",
+                  "description": "Giveaway UUID"
+                }
+              ]
+            },
+            "description": "Update existing giveaway with optional image upload.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Giveaway UUID\n\n**Form Data Fields (all optional):**\n- giveawayImage: New image file\n- title: Giveaway title\n- description: Giveaway description\n- startDate: Start date YYYY-MM-DD\n- endDate: End date YYYY-MM-DD\n- isMonthlyActive: true or false\n- status: Set to DRAFT to prevent auto-updates\n\n**Note:**\n- Only send fields you want to update\n- Status auto-updates unless set to DRAFT\n\n**Response:**\n- Updated giveaway with image URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Giveaway (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Giveaway deleted successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "giveaway-id-here",
+                  "description": "Giveaway UUID"
+                }
+              ]
+            },
+            "description": "Delete a giveaway and all its entries.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Giveaway UUID\n\n**Note:**\n- This will also delete all user entries (cascade delete)\n\n**Response:**\n- Success message"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Giveaway Entries (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Total entries:', response.data.pagination.total);",
+                  "    if (response.data.entries.length > 0) {",
+                  "        console.log('First entry:', response.data.entries[0].user.fullName);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/:id/entries?page=1&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", ":id", "entries"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Items per page (default: 50, max: 100)"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "giveaway-id-here",
+                  "description": "Giveaway UUID"
+                }
+              ]
+            },
+            "description": "Get all entries for a specific giveaway.\n\n**Authentication Required:** Admin role\n\n**Path Parameter:**\n- id: Giveaway UUID\n\n**Query Parameters:**\n- page: Page number (default: 1)\n- limit: Items per page (default: 50, max: 100)\n\n**Response:**\n- Array of entries with user details (email, name)\n- Entry timestamp (enteredAt)\n- Pagination metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Giveaway Status (User) - NEW ⭐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Giveaway Status Retrieved');",
+                  "    console.log('Giveaway:', response.data.giveaway?.title || 'None');",
+                  "    console.log('Has Entered:', response.data.hasEntered);",
+                  "    console.log('Entry Count:', response.data.entryCount);",
+                  "    if (response.data.userEnteredAt) {",
+                  "        console.log('Entered At:', response.data.userEnteredAt);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/check-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", "check-status"]
+            },
+            "description": "Check user's entry status for the active giveaway. Returns whether user has already entered.\n\n**Authentication Required:** Any authenticated user\n\n**No Parameters Required**\n\n**Response:**\n```json\n{\n  \"success\": true,\n  \"data\": {\n    \"giveaway\": {\n      \"id\": \"giveaway-id\",\n      \"title\": \"Win a trip in paris\",\n      \"description\": \"...\",\n      \"giveawayImage\": \"...\",\n      \"status\": \"ACTIVE\",\n      \"_count\": { \"entries\": 150 }\n    },\n    \"hasEntered\": true,           // ← MAIN FIELD: true if already entered, false if not\n    \"entryCount\": 150,             // Total number of entries\n    \"userEnteredAt\": \"2026-03-04T04:14:44.318Z\"  // When user entered (null if not entered)\n  }\n}\n```\n\n**Frontend Usage:**\n1. Call this endpoint on page load\n2. Check `hasEntered` field\n3. If true: Disable \"Enter Now\" button and show \"Already Entered\"\n4. If false: Enable button\n5. After user clicks enter → call \"Enter Giveaway\" endpoint\n6. Response will have `hasEntered: true`\n\n**Use Cases:**\n- Check entry status on page load\n- Update button state based on user's participation\n- Show when user entered the giveaway\n- Display total participant count\n\n**Key Features:**\n- ✅ Works on page reload (backend checks, not localStorage)\n- ✅ Real-time status update\n- ✅ Shows user's entry timestamp\n- ✅ Shows total entry count\n- ✅ No need for multiple endpoints"
+          },
+          "response": []
+        },
+        {
+          "name": "Enter Giveaway (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Successfully entered giveaway');",
+                  "    console.log('Giveaway:', response.data.entry.giveaway.title);",
+                  "    console.log('Entered at:', response.data.entry.enteredAt);",
+                  "    console.log('Has Entered:', response.data.hasEntered);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "description": "User access token (not admin)"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/giveaways/:id/enter",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "giveaways", ":id", "enter"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "giveaway-id-here",
+                  "description": "Giveaway UUID"
+                }
+              ]
+            },
+            "description": "User enters/participates in a giveaway.\n\n**Authentication Required:** Any authenticated user (not admin-only)\n\n**Path Parameter:**\n- id: Giveaway UUID\n\n**No body required** - User info is extracted from token:\n- User ID from token\n- Email from token\n- Name from token\n- Entry timestamp auto-generated\n\n**Validation:**\n- Giveaway must exist\n- Giveaway must be ACTIVE (not DRAFT, UPCOMING, or EXPIRED)\n- User can only enter once per giveaway\n\n**Response (UPDATED - Now includes hasEntered):**\n```json\n{\n  \"success\": true,\n  \"message\": \"Successfully entered the giveaway\",\n  \"data\": {\n    \"entry\": {\n      \"id\": \"entry-id\",\n      \"giveawayId\": \"giveaway-id\",\n      \"userId\": \"user-id\",\n      \"enteredAt\": \"2026-03-04T04:14:44.318Z\",\n      \"giveaway\": {\n        \"id\": \"giveaway-id\",\n        \"title\": \"Win a trip in paris\",\n        \"status\": \"ACTIVE\"\n      }\n    },\n    \"hasEntered\": true  // ← NEW FIELD: Always true on successful entry\n  }\n}\n```\n\n**Frontend Implementation:**\n```javascript\nconst response = await fetch(`/api/v1/giveaways/${giveawayId}/enter`, {\n  method: 'POST',\n  headers: { 'Authorization': `Bearer ${token}` }\n});\nconst data = await response.json();\n\nif (data.success) {\n  setHasEntered(data.data.hasEntered);  // Set to true\n  setButtonDisabled(true);                // Disable button\n  setButtonText('Already Entered');       // Update text\n}\n```\n\n**Error Cases:**\n- 404: Giveaway not found\n- 400: Giveaway not active (must be ACTIVE status)\n- 400: Already entered this giveaway (user tried to enter twice)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Giveaway management for admin and user participation.\n\n**All Endpoints:**\n- GET /giveaways/public/active - Get active giveaway (Public - no auth)\n- GET /giveaways/active - Get active giveaway (User)\n- GET /giveaways/:id - Get specific giveaway\n- GET /giveaways - List all giveaways (Admin)\n- GET /giveaways/:id/entries - Get all entries (Admin)\n- POST /giveaways - Create new giveaway (Admin)\n- PUT /giveaways/:id - Update giveaway (Admin)\n- DELETE /giveaways/:id - Delete giveaway (Admin)\n- **GET /giveaways/check-status - Check user's entry status (NEW ⭐)**\n- **POST /giveaways/:id/enter - User enters giveaway**\n\n**NEW FEATURE: Check Entry Status**\n- Endpoint: `GET /api/v1/giveaways/check-status`\n- Returns: `hasEntered` (true/false), `entryCount`, `userEnteredAt`\n- Perfect for disabling \"Enter Now\" button if user already entered\n- Works on page reload (backend checks, not localStorage)\n\n**Features:**\n- Image upload support (giveawayImage field)\n- Automatic status updates based on dates\n- Search by title or description\n- Filter by status (DRAFT, UPCOMING, ACTIVE, EXPIRED)\n- Pagination support\n- Monthly active flag\n- Entry tracking with user details\n- User participation (one entry per user)\n- Entry status checking\n\n**Auto Status Logic:**\n- UPCOMING: startDate > now\n- ACTIVE: Between start and end date\n- EXPIRED: endDate < now\n- DRAFT: Manual status (not auto-updated)\n\n**Security:**\n- Admin endpoints require ADMIN role\n- User endpoints require authentication\n- Entry endpoints automatically validate user access"
+    },
+    {
+      "name": "Image Upload",
+      "item": [
+        {
+          "name": "Upload Single Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('Response:', pm.response.text());",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.url) {",
+                  "        pm.environment.set('uploaded_image_url', jsonData.data.url);",
+                  "        pm.environment.set('uploaded_image_filename', jsonData.data.filename);",
+                  "        console.log('Image URL saved:', jsonData.data.url);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/upload/image",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "upload", "image"]
+            },
+            "description": "Upload single image file.\n\n**Authentication Required:** Yes\n\n**Form Data:**\n- image: Image file (JPEG, JPG, PNG, GIF, WebP)\n\n**File Limits:**\n- Max size: 5MB\n- Allowed formats: JPEG, JPG, PNG, GIF, WebP\n\n**Response:**\nReturns image URL and metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Multiple Images",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('Response:', pm.response.text());",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.files) {",
+                  "        console.log('Uploaded', jsonData.data.count, 'images');",
+                  "        jsonData.data.files.forEach((file, index) => {",
+                  "            console.log(`Image ${index + 1}:`, file.url);",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/upload/images",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "upload", "images"]
+            },
+            "description": "Upload multiple image files at once.\n\n**Authentication Required:** Yes\n\n**Form Data:**\n- images: Multiple image files (max 10)\n\n**File Limits:**\n- Max files: 10\n- Max size per file: 5MB\n- Allowed formats: JPEG, JPG, PNG, GIF, WebP\n\n**Response:**\nReturns array of image URLs and metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('Response:', pm.response.text());",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    console.log('Image deleted successfully');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/upload/image/:filename",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "upload", "image", ":filename"],
+              "variable": [
+                {
+                  "key": "filename",
+                  "value": "{{uploaded_image_filename}}",
+                  "description": "Image filename to delete"
+                }
+              ]
+            },
+            "description": "Delete uploaded image.\n\n**Authentication Required:** Yes\n\n**Path Parameter:**\n- filename: Name of the file to delete\n\n**Note:**\n- Only deletes the physical file\n- Permanent deletion"
+          },
+          "response": []
+        }
+      ],
+      "description": "Image upload management using Multer.\n\n**All Endpoints:**\n- POST /upload/image - Upload single image\n- POST /upload/images - Upload multiple images (max 10)\n- DELETE /upload/image/:filename - Delete image\n\n**File Handling:**\n- Images saved locally in /uploads directory\n- Works on any server (local or deployed)\n- Unique filenames generated automatically\n- Returns accessible URLs for each uploaded image\n\n**Supported Formats:**\n- JPEG / JPG\n- PNG\n- GIF\n- WebP\n\n**Limits:**\n- Max file size: 5MB per image\n- Max files in multiple upload: 10\n\n**Security:**\n- All endpoints require authentication\n- File type validation enforced\n- Size limits enforced"
+    },
+    {
+      "name": "Website Settings",
+      "item": [
+        {
+          "name": "Get Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Settings retrieved');",
+                  "    console.log('Website Name:', response.data.settings.websiteName);",
+                  "    console.log('Contact Email:', response.data.settings.contactEmail);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "settings"]
+            },
+            "description": "Get current website settings.\n\n**Authentication Required:** Admin role\n\n**Response Fields:**\n- websiteName: Name of the website\n- contactEmail: Contact email address\n- defaultHomeAirport: Default airport code\n- aboutUsText: About us description\n- requireEmailConfirm: Whether email confirmation is required\n- allowPublicReg: Whether public registration is allowed"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Settings updated successfully');",
+                  "    console.log('Website Name:', response.data.settings.websiteName);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"websiteName\": \"Travel in a Click\",\n  \"contactEmail\": \"contact@travelinaclick.com\",\n  \"defaultHomeAirport\": \"DAC\",\n  \"aboutUsText\": \"Travel in a Click is a members only travel subscription with monthly giveaways, exclusive guides and personalised offers from your local airport.\",\n  \"requireEmailConfirm\": true,\n  \"allowPublicReg\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/settings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "settings"]
+            },
+            "description": "Update website settings.\n\n**Authentication Required:** Admin role\n\n**Request Body (JSON):**\n- websiteName: Website name (required)\n- contactEmail: Contact email (required, must be valid email)\n- defaultHomeAirport: Airport code (required)\n- aboutUsText: About us text (required)\n- requireEmailConfirm: Boolean, require email confirmation (optional)\n- allowPublicReg: Boolean, allow public registration (optional)\n\n**Response:**\n- Updated settings object"
+          },
+          "response": []
+        }
+      ],
+      "description": "Website settings management for admin.\n\n**All Endpoints:**\n- GET /settings - Get current settings\n- PUT /settings - Update settings\n\n**Settings Fields:**\n- Website Name\n- Contact Email\n- Default Home Airport\n- About Us Text\n- Require Email Confirmation (Boolean)\n- Allow Public Registration (Boolean)\n\n**Features:**\n- Single settings record (ID always 1)\n- Auto-create default settings if not exist\n- Email format validation\n- Boolean field handling\n\n**Security:**\n- All endpoints require ADMIN role\n- Authentication token required"
+    },
+    {
+      "name": "Contact Form",
+      "item": [
+        {
+          "name": "Submit Contact Form",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ Contact form submitted successfully');",
+                  "    console.log('📧 Email sent to admin');",
+                  "} else {",
+                  "    console.log('❌ Contact form submission failed:', pm.response.json().message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"message\": \"Hi, I have a question about your travel deals. Can you provide more information about the annual membership benefits?\"\n}\n\n// REQUIRED FIELDS:\n// - fullName (string): Sender's full name\n// - email (string): Valid email address\n// - message (string): Message content (10-1000 characters)\n//\n// VALIDATION:\n// - Email format is validated\n// - Message must be at least 10 characters\n// - Message must not exceed 1000 characters\n//\n// NOTE: No authentication required (public endpoint)"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/{{api_version}}/contact/submit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "{{api_version}}", "contact", "submit"]
+            },
+            "description": "Submit a contact form message to the admin team.\n\n**Public Endpoint:** No authentication required\n\n**Required Fields:**\n- fullName: Sender's full name\n- email: Valid email address (format validated)\n- message: Message content (10-1000 characters)\n\n**What This Does:**\n1. Validates all input fields\n2. Checks email format\n3. Validates message length (10-1000 chars)\n4. Sends email notification to admin (info@travelinaclick.ie)\n5. Email includes sender's details and message\n6. Reply-to automatically set to sender's email\n\n**Response:**\n- Success message confirming submission\n- User receives confirmation\n\n**Email Features:**\n- Beautiful HTML template\n- Sender's name and email\n- Message with proper formatting\n- Submission timestamp\n- Quick reply button\n- Admin can reply directly by responding to email\n\n**Validation Rules:**\n- Full name: Required, non-empty\n- Email: Required, valid format\n- Message: Required, 10-1000 characters\n\n**Use Cases:**\n- Contact us page on website\n- Customer inquiries\n- Support requests\n- General questions\n\n**Security:**\n- Server-side validation\n- Spam protection via message length limits\n- Email format validation\n- Rate limiting (can be added if needed)\n\n**Error Responses:**\n- 400: Missing fields or invalid data\n- 500: Email service failure"
+          },
+          "response": []
+        }
+      ],
+      "description": "Contact form submission endpoint.\n\n**Endpoint:**\n- POST /contact/submit - Submit contact form\n\n**Public Access:**\n- No authentication required\n- Anyone can submit contact forms\n\n**Features:**\n- Email notification to admin (info@travelinaclick.ie)\n- Beautiful HTML email template\n- Automatic reply-to sender's email\n- Input validation (email format, message length)\n- Professional confirmation message\n\n**Validation:**\n- Full name: Required\n- Email: Required, valid format\n- Message: 10-1000 characters\n\n**Use Case:**\n- Website contact form\n- Customer support inquiries\n- General questions\n- Business inquiries\n\n**Email Template Includes:**\n- Sender's full name\n- Sender's email (clickable)\n- Message content (formatted)\n- Submission date/time\n- Reply button\n- Professional branding"
+    }
+  ]
+}
