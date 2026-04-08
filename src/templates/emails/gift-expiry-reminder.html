@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 40px 30px; text-align: center; }
+    .header h1 { font-size: 28px; margin: 10px 0 0 0; }
+    .timer-icon { font-size: 60px; margin-bottom: 10px; }
+    .content { padding: 40px 30px; }
+    .expiry-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0; }
+    .expiry-date { font-size: 22px; font-weight: 700; color: #92400e; margin-top: 8px; }
+    .benefits-box { background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 0 8px 8px 0; padding: 20px 24px; margin: 20px 0; }
+    .button-wrap { text-align: center; margin: 30px 0; }
+    .button { display: inline-block; padding: 16px 36px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; }
+    .price-tag { font-size: 28px; font-weight: 700; color: #059669; text-align: center; margin: 10px 0; }
+    .footer { background: #f9fafb; padding: 30px; text-align: center; }
+    ul { margin: 10px 0; padding-left: 20px; color: #374151; }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="timer-icon">⏰</div>
+      <h1>Your Subscription Expires Soon</h1>
+    </div>
+
+    <div class="content">
+      <p>Hi {{firstName}},</p>
+
+      <p>We hope you've been loving your Travel in a Click membership and all the incredible travel deals it brings!</p>
+
+      <p>Just a heads-up — your gift subscription is coming to an end in <strong>1 month</strong>.</p>
+
+      <div class="expiry-box">
+        <p style="margin: 0; font-size: 14px; color: #78350f; text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">Subscription Expiry Date</p>
+        <div class="expiry-date">{{expiryDate}}</div>
+      </div>
+
+      <p>To keep getting exclusive deals, premium travel guides, and monthly giveaway entries without interruption, renew your membership today.</p>
+
+      <div class="benefits-box">
+        <p style="margin: 0 0 10px 0; font-weight: 700; color: #059669;">What you'll keep access to:</p>
+        <ul>
+          <li>✈️ Two curated deal emails per week with up to 70% savings</li>
+          <li>🗺️ 100+ premium travel guides from expert writers</li>
+          <li>🎁 Monthly giveaways – win free trips & travel prizes</li>
+          <li>⭐ Exclusive subscriber-only offers</li>
+        </ul>
+      </div>
+
+      <div class="price-tag">€9.99 / year</div>
+
+      <div class="button-wrap">
+        <a href="{{renewalUrl}}" class="button">🔄 Renew My Subscription</a>
+      </div>
+
+      <p style="text-align: center; font-size: 13px; color: #6b7280;">
+        Or log in to your account at <a href="{{loginUrl}}" style="color: #10b981;">Travel in a Click</a> and renew from your dashboard.
+      </p>
+
+      <p style="margin-top: 30px;">Thank you for being part of our travel community — we'd love to keep exploring the world with you!</p>
+
+      <p>Warm regards,<br>The Travel in a Click Team</p>
+    </div>
+
+    <div class="footer">
+      <p style="color: #10b981; font-weight: 700; margin-bottom: 5px;">Travel in a Click</p>
+      <p style="color: #6b7280; font-size: 13px; margin: 0;">© 2026 Travel in a Click. All rights reserved.</p>
+      <p style="color: #9ca3af; font-size: 12px; margin-top: 10px;">
+        You're receiving this because your gift subscription is expiring soon.<br>
+        Questions? Contact us at info@travelinaclick.ie
+      </p>
+    </div>
+  </div>
+</body>
+</html>
